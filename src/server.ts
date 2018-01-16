@@ -1,8 +1,9 @@
 /// <reference path="../typings/koa-session.d.ts" />
 const Koa = require('koa')
-const app = new Koa()
+const app = new Koa();
 app.keys = ['secret', 'key'];
-import { resBody, resError, resInfo } from './util/response'
+import {resBody, resError, resInfo} from './util/response'
+
 app.on('error', (err, ctx) => {
 	resError(ctx.request.url, err)
 	console.log(err)
@@ -13,7 +14,7 @@ app.on('error', (err, ctx) => {
 const views = require('koa-views')
 app.use(views(__dirname + '/../views', {
 	extension: 'jade'
-}))
+}));
 
 // 中间件
 const convert = require('koa-convert') // 转换为2.0
@@ -31,7 +32,7 @@ var storage = multer.diskStorage({
 		cb(null, `${Date.now()}-${file.originalname}`)
 	}
 })
-const upload = multer({ storage })
+const upload = multer({storage})
 var session = require('koa-session'); // session
 var CONFIG = {
 	key: 'cacivy', /** (string) cookie key (default is koa:sess) */
@@ -43,7 +44,7 @@ var CONFIG = {
 app.use(convert(session(CONFIG, app)));
 app.use(convert(bodyparser()))
 app.use(convert(json()))
-app.use(cors({ credentials: true }))
+app.use(cors({credentials: true}))
 app.use(convert(logger()))
 app.use(koaStatic(__dirname + '/../static'))
 app.use(koaStatic(__dirname + '/../doc'))
@@ -64,13 +65,16 @@ app.use(async (ctx: koarouter.IRouterContext, next) => {
 });
 
 // db
-import mongoose = require('mongoose')
-mongoose.Promise = global.Promise
-mongoose.connect('mongodb://localhost:27017/blog')
+let AV = require("leancloud-storage");
+import {lean} from "../config"
+
+AV.init(lean);
+AV.Cloud.useMasterKey();
 
 // router
 import fs = require('fs')
 import koarouter = require('koa-router')
+
 const router = new koarouter()
 
 // 递归读取controller,目前只支持二级目录
@@ -78,22 +82,21 @@ function readdirToRouter(child = '') {
 	let path = `${__dirname}/controller${child ? `/${child}` : ''}`
 	fs.readdirSync(path).forEach((file) => {
 		let path = file.split('.')
-		let name = path[0]
-		if (path.length > 1) {
-			if (path[path.length - 1] === 'js') {
-				let child_path = child ? `${child}/` : ''
-				let route = require(`./controller/${child_path}${name}`)
-				if (name === 'index') {
-					router.use(`/api/${child}`, route.routes(), route.allowedMethods())
-				} else {
-					router.use(`/api/${child_path}${name}`, route.routes(), route.allowedMethods())
-				}
+		let name = path[0];
+		if (path.length > 1 && (path[path.length - 1] === 'js')) {
+			let child_path = child ? `${child}/` : ''
+			let route = require(`./controller/${child_path}${name}`)
+			if (name === 'index') {
+				router.use(`/api/${child}`, route.routes(), route.allowedMethods())
+			} else {
+				router.use(`/api/${child_path}${name}`, route.routes(), route.allowedMethods())
 			}
 		} else {
 			readdirToRouter(file)
 		}
 	})
 }
+
 readdirToRouter()
 app.use(router.routes(), router.allowedMethods());
 router.post('/api/upload', upload.single('upfiles'), async (ctx, next) => {
@@ -103,7 +106,8 @@ router.post('/api/upload', upload.single('upfiles'), async (ctx, next) => {
 
 // server
 import http = require('http')
-var port = process.env.PORT || '8085'
+
+var port = process.env.PORT || '8085';
 var server = http.createServer(app.callback())
 server.listen(port)
 server.on('listen', () => {
@@ -112,4 +116,4 @@ server.on('listen', () => {
 		? 'pipe ' + addr
 		: 'port ' + addr.port
 	console.log('Listening on ' + bind)
-})
+});

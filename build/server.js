@@ -70,9 +70,10 @@ app.use((ctx, next) => __awaiter(this, void 0, void 0, function* () {
     yield next();
 }));
 // db
-const mongoose = require("mongoose");
-mongoose.Promise = global.Promise;
-mongoose.connect('mongodb://localhost:27017/blog');
+let AV = require("leancloud-storage");
+const config_1 = require("../config");
+AV.init(config_1.lean);
+AV.Cloud.useMasterKey();
 // router
 const fs = require("fs");
 const koarouter = require("koa-router");
@@ -83,16 +84,14 @@ function readdirToRouter(child = '') {
     fs.readdirSync(path).forEach((file) => {
         let path = file.split('.');
         let name = path[0];
-        if (path.length > 1) {
-            if (path[path.length - 1] === 'js') {
-                let child_path = child ? `${child}/` : '';
-                let route = require(`./controller/${child_path}${name}`);
-                if (name === 'index') {
-                    router.use(`/api/${child}`, route.routes(), route.allowedMethods());
-                }
-                else {
-                    router.use(`/api/${child_path}${name}`, route.routes(), route.allowedMethods());
-                }
+        if (path.length > 1 && (path[path.length - 1] === 'js')) {
+            let child_path = child ? `${child}/` : '';
+            let route = require(`./controller/${child_path}${name}`);
+            if (name === 'index') {
+                router.use(`/api/${child}`, route.routes(), route.allowedMethods());
+            }
+            else {
+                router.use(`/api/${child_path}${name}`, route.routes(), route.allowedMethods());
             }
         }
         else {
